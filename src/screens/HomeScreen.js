@@ -1,10 +1,11 @@
-// HomeScreen - landing page with app branding and CTA
+// HomeScreen (View)
+// Only handles UI rendering - logic comes from the ViewModel
 import React from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import useHomeViewModel from "../viewmodels/useHomeViewModel";
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
+  const { onBrowsePress } = useHomeViewModel();
 
   return (
     <View style={styles.container}>
@@ -24,7 +25,7 @@ const HomeScreen = () => {
       {/* CTA Button */}
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate("ListingsTab")}
+        onPress={onBrowsePress}
         activeOpacity={0.85}
       >
         <Text style={styles.buttonText}>Browse Listings</Text>

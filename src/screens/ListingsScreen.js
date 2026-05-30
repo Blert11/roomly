@@ -1,17 +1,21 @@
-// ListingsScreen - shows all available apartment listings
+// ListingsScreen (View)
+// Only handles UI rendering - logic comes from the ViewModel
 import React from "react";
-import { View, FlatList, Image, StyleSheet, Text } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import listings from "../data/listings";
+import { View, FlatList, StyleSheet, Text, ActivityIndicator } from "react-native";
+import useListingsViewModel from "../viewmodels/useListingsViewModel";
 import ListingCard from "../components/ListingCard";
 
 const ListingsScreen = () => {
-  const navigation = useNavigation();
+  const { listings, loading, onListingPress } = useListingsViewModel();
 
-  // Navigate to details when a card is tapped
-  const handlePress = (listing) => {
-    navigation.navigate("Details", { listing });
-  };
+  // Show loading spinner while data is being fetched
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2c3947" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -21,12 +25,10 @@ const ListingsScreen = () => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <ListingCard listing={item} onPress={() => handlePress(item)} />
+          <ListingCard listing={item} onPress={() => onListingPress(item)} />
         )}
         ListHeaderComponent={
-          <View>
-            <Text style={styles.header}>Available Listings</Text>
-          </View>
+          <Text style={styles.header}>Available Listings</Text>
         }
       />
     </View>
@@ -38,14 +40,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#e8edf2",
   },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#e8edf2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   list: {
     padding: 16,
     paddingBottom: 24,
-  },
-  logo: {
-    width: 120,
-    height: 40,
-    marginBottom: 16,
   },
   header: {
     fontSize: 22,

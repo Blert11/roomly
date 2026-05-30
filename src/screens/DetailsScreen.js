@@ -1,4 +1,5 @@
-// DetailsScreen - shows full details for a selected listing
+// DetailsScreen (View)
+// Only handles UI rendering - logic comes from the ViewModel
 import React from "react";
 import {
   View,
@@ -7,16 +8,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
+import useDetailsViewModel from "../viewmodels/useDetailsViewModel";
 
 const DetailsScreen = ({ route }) => {
-  // Get the listing data passed from ListingsScreen
-  const { listing } = route.params;
-
-  const handleContact = () => {
-    Alert.alert("Contact Owner", "This feature is coming soon!");
-  };
+  const { listing, onContactPress } = useDetailsViewModel(route);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -34,7 +30,7 @@ const DetailsScreen = ({ route }) => {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={handleContact}
+          onPress={onContactPress}
           activeOpacity={0.85}
         >
           <Text style={styles.buttonText}>Contact Owner</Text>

@@ -1,15 +1,22 @@
-// ProfileScreen - simple placeholder for profile tab
+// ProfileScreen (View)
+// Only handles UI rendering - logic comes from the ViewModel
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import useProfileViewModel from "../viewmodels/useProfileViewModel";
 
 const ProfileScreen = () => {
+  const { user } = useProfileViewModel();
+
+  // Wait for user data to load
+  if (!user) return null;
+
   return (
     <View style={styles.container}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>👤</Text>
+        <Text style={styles.avatarIcon}>👤</Text>
       </View>
-      <Text style={styles.name}>John Doe</Text>
-      <Text style={styles.email}>johndoe@email.com</Text>
+      <Text style={styles.name}>{user.name}</Text>
+      <Text style={styles.email}>{user.email}</Text>
       <Text style={styles.note}>Profile settings coming soon...</Text>
     </View>
   );
@@ -32,7 +39,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
   },
-  avatarText: {
+  avatarIcon: {
     fontSize: 36,
   },
   name: {
