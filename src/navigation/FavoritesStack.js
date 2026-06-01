@@ -1,11 +1,11 @@
-// src/navigation/ListingsStack.js
-// Stack navigator: Listings list → Listing detail
+// src/navigation/FavoritesStack.js
+// Stack navigator: Favorites list → Listing detail
 
 import React from "react";
 import { Image, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import ListingsScreen from "../view/screens/ListingsScreen";
-import DetailsScreen  from "../view/screens/DetailsScreen";
+import FavoritesScreen from "../view/screens/FavoritesScreen";
+import DetailsScreen from "../view/screens/DetailsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -17,22 +17,22 @@ const HeaderLogo = () => (
   />
 );
 
-export default function ListingsStack() {
+export default function FavoritesStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle:      { backgroundColor: "#ffffff" },
-        headerTintColor:  "#2c3947",
+        headerStyle: { backgroundColor: "#ffffff" },
+        headerTintColor: "#2c3947",
         headerTitleStyle: { fontWeight: "600" },
       }}
     >
       <Stack.Screen
-        name="Listings"
-        component={ListingsScreen}
+        name="Favorites"
+        component={FavoritesScreen}
         options={{ headerTitle: () => <HeaderLogo /> }}
       />
       <Stack.Screen
-        name="Details"
+        name="FavoriteDetails"
         component={DetailsScreen}
         options={{ title: "Listing Details" }}
       />
