@@ -1,22 +1,15 @@
-// ProfileScreen (View)
-// Only handles UI rendering - logic comes from the ViewModel
+// ProfileScreen - simple placeholder for profile tab
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import useProfileViewModel from "../viewmodels/useProfileViewModel";
 
 const ProfileScreen = () => {
-  const { user } = useProfileViewModel();
-
-  // Wait for user data to load
-  if (!user) return null;
-
   return (
     <View style={styles.container}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarIcon}>👤</Text>
+        <Text style={styles.avatarText}>👤</Text>
       </View>
-      <Text style={styles.name}>{user.name}</Text>
-      <Text style={styles.email}>{user.email}</Text>
+      <Text style={styles.name}>John Doe</Text>
+      <Text style={styles.email}>johndoe@email.com</Text>
       <Text style={styles.note}>Profile settings coming soon...</Text>
     </View>
   );
@@ -24,39 +17,125 @@ const ProfileScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: "#e8edf2",
     alignItems: "center",
-    justifyContent: "center",
     padding: 24,
   },
+
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: "#2c3947",
-    alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    alignItems: "center",
+    marginTop: 40,
   },
-  avatarIcon: {
+  avatarText: {
     fontSize: 36,
   },
-  name: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1f2933",
-    marginBottom: 4,
+
+  profileImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    marginTop: 40,
   },
+
+  changePhotoText: {
+    marginTop: 10,
+    marginBottom: 20,
+    color: "#2563eb",
+    fontWeight: "600",
+  },
+
+  name: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1f2933",
+  },
+
   email: {
     fontSize: 14,
     color: "#7b8794",
-    marginBottom: 24,
+    marginBottom: 30,
   },
-  note: {
-    fontSize: 13,
-    color: "#9aa5b1",
-    fontStyle: "italic",
+
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    elevation: 4,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 20,
+    color: "#1f2933",
+  },
+
+  input: {
+    backgroundColor: "#f1f5f9",
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 14,
+    fontSize: 15,
+  },
+
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
+  },
+
+  imageButton: {
+    backgroundColor: "#2c3947",
+    padding: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  imageButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  previewImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+
+  postButton: {
+    backgroundColor: "#2563eb",
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+
+  postButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  logoutButton: {
+    marginTop: 30,
+    backgroundColor: "#dc3545",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 10,
+    marginBottom: 40,
+  },
+
+  logoutText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
   },
 });
 
