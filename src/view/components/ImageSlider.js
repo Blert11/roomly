@@ -1,20 +1,21 @@
 // src/view/components/ImageSlider.js
 // ─────────────────────────────────────────────
 // VIEW LAYER — reusable image slider with dot indicators.
-// Used in ListingCard (compact) and DetailsScreen (full-width).
+// Used in ListingCard (compact), DetailsScreen (full-width), and the
+// fullscreen lightbox.
 // Pure render. Receives props only. No logic, no Firebase.
 // ─────────────────────────────────────────────
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   Dimensions,
   TouchableOpacity,
 } from "react-native";
+import { Image } from "expo-image";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -24,9 +25,31 @@ export default function ImageSlider({
   width = SCREEN_WIDTH,
   borderRadius = 0,
   showPlaceholder = true,
+  initialIndex = 0,
+  onPressImage,
+  contentFit = "cover",
+  showCount = true,
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
   const scrollRef = useRef(null);
+
+  // Scroll to the requested initial position once layout is ready.
+  useEffect(() => {
+    if (
+      initialIndex > 0 &&
+      imageURLs.length > 1 &&
+      scrollRef.current
+    ) {
+      // Defer slightly so the ScrollView has measured.
+      const id = setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          x: initialIndex * width,
+          animated: false,
+        });
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [initialIndex, imageURLs.length, width]);
 
   // No images — show placeholder
   if (!imageURLs || imageURLs.length === 0) {
@@ -40,16 +63,23 @@ export default function ImageSlider({
 
   // Single image — no slider needed
   if (imageURLs.length === 1) {
-    return (
+    const single = (
       <Image
         source={{ uri: imageURLs[0] }}
         style={{ width, height, borderRadius }}
-        resizeMode="cover"
+        contentFit={contentFit}
+        cachePolicy="memory-disk"
+        transition={150}
       />
+    );
+    if (!onPressImage) return single;
+    return (
+      <TouchableOpacity activeOpacity={0.95} onPress={() => onPressImage(0)}>
+        {single}
+      </TouchableOpacity>
     );
   }
 
-  // Multiple images — horizontal scroll slider
   function handleScroll(event) {
     const offsetX  = event.nativeEvent.contentOffset.x;
     const newIndex = Math.round(offsetX / width);
@@ -63,7 +93,6 @@ export default function ImageSlider({
 
   return (
     <View style={{ width, height }}>
-      {/* Scrollable images */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -76,24 +105,40 @@ export default function ImageSlider({
         scrollEventThrottle={16}
         style={{ width, height, borderRadius }}
       >
-        {imageURLs.map((uri, index) => (
-          <Image
-            key={index}
-            source={{ uri }}
-            style={{ width, height, borderRadius }}
-            resizeMode="cover"
-          />
-        ))}
+        {imageURLs.map((uri, index) => {
+          const img = (
+            <Image
+              source={{ uri }}
+              style={{ width, height, borderRadius }}
+              contentFit={contentFit}
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+          );
+          if (!onPressImage) {
+            return <View key={index} style={{ width, height }}>{img}</View>;
+          }
+          return (
+            <TouchableOpacity
+              key={index}
+              activeOpacity={0.95}
+              onPress={() => onPressImage(index)}
+              style={{ width, height }}
+            >
+              {img}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* Photo count badge — top right */}
-      <View style={styles.countBadge}>
-        <Text style={styles.countText}>
-          {activeIndex + 1} / {imageURLs.length}
-        </Text>
-      </View>
+      {showCount && (
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>
+            {activeIndex + 1} / {imageURLs.length}
+          </Text>
+        </View>
+      )}
 
-      {/* Dot indicators — bottom center */}
       <View style={styles.dotsRow}>
         {imageURLs.map((_, index) => (
           <TouchableOpacity

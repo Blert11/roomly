@@ -6,8 +6,13 @@
 // ViewModels and Views must NEVER import this directly.
 // ─────────────────────────────────────────────
 
+import { Platform } from "react-native";
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -24,6 +29,21 @@ const firebaseConfig = {
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-export const auth    = getAuth(app);
+// React Native needs initializeAuth + AsyncStorage so sessions survive reloads.
+// On web, the SDK already persists to localStorage via getAuth().
+function makeAuth() {
+  if (Platform.OS === "web") return getAuth(app);
+  try {
+    const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    // initializeAuth throws if already called on this app (e.g. fast refresh).
+    return getAuth(app);
+  }
+}
+
+export const auth    = makeAuth();
 export const db      = getFirestore(app);
 export const storage = getStorage(app);

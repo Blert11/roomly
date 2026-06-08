@@ -1,245 +1,62 @@
 // src/viewmodel/useProfileViewModel.js
 // ─────────────────────────────────────────────
-// VIEWMODEL LAYER — owns profile photo, listing creation, logout.
-// Calls model/services. Exposes clean state to the View.
-// No Firebase imports. No JSX. No UI rendering.
+// VIEWMODEL LAYER — account screen: avatar, profile edit (name/email),
+// "my listings" feed, delete-listing, logout.
+// Post-listing flow lives in usePostListingViewModel.
 // ─────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+
+// Open the device's default mail app — tries Gmail first, then iOS Mail,
+// then falls back to the generic mailto: handler.
+async function openMailApp() {
+  const candidates = ["googlegmail://", "message://", "mailto:"];
+  for (const url of candidates) {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) { await Linking.openURL(url); return; }
+    } catch (_) { /* try next */ }
+  }
+  Alert.alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
+}
 import {
   logOut,
   updateUserProfile,
+  updateUserEmail,
   getCurrentUser,
+  resendVerificationEmail,
+  reloadCurrentUser,
 } from "../model/services/auth.service";
 import {
-  createListing,
   deleteListing,
   subscribeToUserListings,
   uploadAvatar,
 } from "../model/services/listings.service";
-import { GOOGLE_MAPS_API_KEY } from "../model/config/maps.config";
-
-const MAX_IMAGES = 5;
-const DEFAULT_MAP_CENTER = { latitude: 44.7866, longitude: 20.4489 };
-
-function buildLocationPickerHtml(selectedLocation, address) {
-  const hasApiKey =
-    GOOGLE_MAPS_API_KEY &&
-    GOOGLE_MAPS_API_KEY !== "YOUR_GOOGLE_MAPS_API_KEY";
-  const center = selectedLocation || DEFAULT_MAP_CENTER;
-  const initialAddress = (address || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-
-  if (!hasApiKey) {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta name="viewport" content="initial-scale=1, maximum-scale=1" />
-          <style>
-            html, body {
-              height: 100%;
-              margin: 0;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-              background: #f1f5f9;
-              color: #52606d;
-            }
-            .message {
-              height: 100%;
-              box-sizing: border-box;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 18px;
-              text-align: center;
-              font-size: 14px;
-              line-height: 20px;
-              font-weight: 600;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="message">
-            Add your Google Maps API key in src/model/config/maps.config.js to enable address suggestions and pin selection.
-          </div>
-        </body>
-      </html>
-    `;
-  }
-
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="initial-scale=1, maximum-scale=1" />
-        <style>
-          html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          }
-          #map {
-            width: 100%;
-            height: 100%;
-          }
-          #search {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            z-index: 5;
-            height: 42px;
-            box-sizing: border-box;
-            border: 0;
-            border-radius: 10px;
-            padding: 0 14px;
-            font-size: 15px;
-            color: #1f2933;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
-            outline: none;
-          }
-          .pac-container {
-            z-index: 9999;
-          }
-        </style>
-      </head>
-      <body>
-        <input id="search" type="text" placeholder="Search real street address" value="${initialAddress}" />
-        <div id="map"></div>
-        <script>
-          let map;
-          let marker = null;
-          let geocoder = null;
-          const initialLocation = ${selectedLocation ? JSON.stringify(selectedLocation) : "null"};
-
-          function getCity(components) {
-            const cityTypes = ["locality", "postal_town", "administrative_area_level_2", "administrative_area_level_1"];
-            for (const type of cityTypes) {
-              const match = components.find((component) => component.types.includes(type));
-              if (match) return match.long_name;
-            }
-            return "";
-          }
-
-          function sendLocation(payload) {
-            window.ReactNativeWebView.postMessage(JSON.stringify(payload));
-          }
-
-          function setMarker(latitude, longitude, shouldCenter) {
-            const position = { lat: latitude, lng: longitude };
-            if (marker) {
-              marker.setPosition(position);
-            } else {
-              marker = new google.maps.Marker({
-                position,
-                map,
-                draggable: false
-              });
-            }
-            if (shouldCenter) map.panTo(position);
-          }
-
-          function initMap() {
-            geocoder = new google.maps.Geocoder();
-            const center = { lat: ${center.latitude}, lng: ${center.longitude} };
-            map = new google.maps.Map(document.getElementById("map"), {
-              center,
-              zoom: initialLocation ? 16 : 13,
-              mapTypeControl: false,
-              streetViewControl: false,
-              fullscreenControl: false
-            });
-
-            const input = document.getElementById("search");
-            const autocomplete = new google.maps.places.Autocomplete(input, {
-              fields: ["address_components", "formatted_address", "geometry", "name"],
-              types: ["address"]
-            });
-
-            autocomplete.bindTo("bounds", map);
-            autocomplete.addListener("place_changed", function() {
-              const place = autocomplete.getPlace();
-              if (!place.geometry || !place.geometry.location) return;
-
-              const latitude = place.geometry.location.lat();
-              const longitude = place.geometry.location.lng();
-              const formattedAddress = place.formatted_address || input.value;
-              const city = getCity(place.address_components || []);
-
-              input.value = formattedAddress;
-              setMarker(latitude, longitude, true);
-              map.setZoom(16);
-              sendLocation({
-                latitude,
-                longitude,
-                address: formattedAddress,
-                city
-              });
-            });
-
-            map.addListener("click", function(event) {
-              const latitude = event.latLng.lat();
-              const longitude = event.latLng.lng();
-              setMarker(latitude, longitude, true);
-
-              geocoder.geocode({ location: event.latLng }, function(results, status) {
-                const bestResult = status === "OK" && results && results[0] ? results[0] : null;
-                const formattedAddress = bestResult ? bestResult.formatted_address : input.value;
-                const city = bestResult ? getCity(bestResult.address_components || []) : "";
-                input.value = formattedAddress;
-                sendLocation({
-                  latitude,
-                  longitude,
-                  address: formattedAddress,
-                  city
-                });
-              });
-            });
-
-            if (initialLocation) {
-              setMarker(initialLocation.latitude, initialLocation.longitude, false);
-            }
-          }
-        </script>
-        <script
-          src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap"
-          async
-          defer
-        ></script>
-      </body>
-    </html>
-  `;
-}
+import {
+  subscribeToUserProfile,
+  saveUserPhone,
+} from "../model/services/users.service";
 
 export function useProfileViewModel() {
   const user = getCurrentUser();
 
-  // Profile
+  // Profile photo
   const [profileImage, setProfileImage] = useState(user?.photoURL || null);
 
-  // Create listing form
-  const [title, setTitle]               = useState("");
-  const [address, setAddress]           = useState("");
-  const [city, setCity]                 = useState("");
-  const [price, setPrice]               = useState("");
-  const [category, setCategory]         = useState("studio");
-  const [description, setDescription]   = useState("");
-  const [listingLocation, setListingLocation] = useState(null);
-
-  // Multiple listing images — array of local URIs (max 5)
-  const [listingImages, setListingImages] = useState([]);
+  // Editable account fields
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  const [email, setEmail]             = useState(user?.email || "");
+  const [phone, setPhone]             = useState("");
+  const [savedPhone, setSavedPhone]   = useState("");
+  const [savingName, setSavingName]   = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   // User's own listings (live)
   const [myListings, setMyListings] = useState([]);
-
-  // Async state
-  const [submitting, setSubmitting] = useState(false);
   const [deletingListingId, setDeletingListingId] = useState(null);
-  const [error, setError]           = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -247,6 +64,21 @@ export function useProfileViewModel() {
       user.uid,
       (data) => setMyListings(data),
       (err) => console.error("[ProfileVM]", err.message)
+    );
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // Live profile doc (phone, push token, etc.)
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToUserProfile(
+      user.uid,
+      (profile) => {
+        const next = profile?.phone || "";
+        setSavedPhone(next);
+        setPhone((cur) => (cur === "" ? next : cur));
+      },
+      (err) => console.error("[ProfileVM] profile:", err.message)
     );
     return () => unsubscribe();
   }, [user?.uid]);
@@ -285,110 +117,149 @@ export function useProfileViewModel() {
     }
   }
 
-  // ── Listing photos — pick multiple (adds to existing selection) ────────────
+  // ── Save display name ──────────────────────────────────────────────────────
 
-  async function pickListingImages() {
-    if (!(await requestGalleryPermission())) return;
-
-    const remaining = MAX_IMAGES - listingImages.length;
-    if (remaining <= 0) {
-      Alert.alert(
-        "Limit reached",
-        `You can add up to ${MAX_IMAGES} photos per listing.`
-      );
+  async function handleSaveDisplayName() {
+    const trimmed = displayName.trim();
+    if (!trimmed) {
+      Alert.alert("Empty name", "Username can't be empty.");
       return;
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-      allowsMultipleSelection: true,   // expo-image-picker v14+ supports this
-      selectionLimit: remaining,
-    });
-
-    if (result.canceled) return;
-
-    const newUris = result.assets.map((a) => a.uri);
-    setListingImages((prev) => [...prev, ...newUris].slice(0, MAX_IMAGES));
-  }
-
-  // ── Remove one photo by index ──────────────────────────────────────────────
-
-  function removeListingImage(index) {
-    setListingImages((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function handleListingLocationMessage(event) {
+    if (trimmed === user?.displayName) {
+      Alert.alert("No changes", "That's already your username.");
+      return;
+    }
+    setSavingName(true);
     try {
-      const location = JSON.parse(event.nativeEvent.data);
-      if (
-        typeof location.latitude === "number" &&
-        typeof location.longitude === "number"
-      ) {
-        if (location.address) setAddress(location.address);
-        if (location.city) setCity(location.city);
-        setListingLocation({
-          latitude: location.latitude,
-          longitude: location.longitude,
-        });
+      await updateUserProfile({ displayName: trimmed });
+      Alert.alert("Saved", "Username updated.");
+    } catch (e) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  // ── Save email ─────────────────────────────────────────────────────────────
+
+  async function handleSaveEmail() {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      Alert.alert("Empty email", "Email can't be empty.");
+      return;
+    }
+    if (trimmed === user?.email) {
+      Alert.alert("No changes", "That's already your email.");
+      return;
+    }
+    setSavingEmail(true);
+    try {
+      await updateUserEmail(trimmed);
+      Alert.alert("Saved", "Email updated.");
+    } catch (e) {
+      // Firebase often requires recent login to change email.
+      Alert.alert(
+        "Could not update email",
+        e.code === "auth/requires-recent-login"
+          ? "For security, please log out and log back in, then try again."
+          : e.message
+      );
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  // ── Resend email verification ──────────────────────────────────────────────
+  // Firebase rate-limits this to roughly one email per minute. We add a
+  // local 60-second cooldown so the button blocks repeat taps before
+  // Firebase rejects them — and translate auth/too-many-requests into
+  // a message the user actually understands.
+
+  const [verifyingEmail, setVerifyingEmail]   = useState(false);
+  const [verifyCooldown, setVerifyCooldown]   = useState(0); // seconds remaining
+  const [checkingVerified, setCheckingVerified] = useState(false);
+  // Mirrors auth.currentUser.emailVerified locally so a reload() actually
+  // re-renders this screen — Firebase mutates the same object reference,
+  // so React wouldn't otherwise notice.
+  const [verifiedNow, setVerifiedNow] = useState(Boolean(user?.emailVerified));
+
+  useEffect(() => {
+    if (verifyCooldown <= 0) return;
+    const t = setTimeout(() => setVerifyCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [verifyCooldown]);
+
+  async function handleCheckVerification() {
+    setCheckingVerified(true);
+    try {
+      const refreshed = await reloadCurrentUser();
+      if (refreshed?.emailVerified) {
+        setVerifiedNow(true);
+        Alert.alert("Verified ✓", "Thanks — your email is confirmed.");
+      } else {
+        Alert.alert(
+          "Not verified yet",
+          "We haven't seen the verification yet. Open the link in the email we sent, then tap this button again."
+        );
       }
     } catch (e) {
-      console.error("[ProfileVM] map location:", e.message);
-    }
-  }
-
-  function clearListingLocation() {
-    setListingLocation(null);
-    setAddress("");
-    setCity("");
-  }
-
-  // ── Post listing ───────────────────────────────────────────────────────────
-
-  async function handlePostListing() {
-    if (!title.trim() || !address.trim() || !price.trim() || !description.trim()) {
-      Alert.alert("Missing fields", "Title, Address, Price and Description are required.");
-      return;
-    }
-    if (isNaN(Number(price)) || Number(price) <= 0) {
-      Alert.alert("Invalid price", "Price must be a positive number.");
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      // Pass the full array — service uploads all in parallel
-      await createListing(
-        {
-          title,
-          description,
-          price,
-          address,
-          city,
-          category,
-          ownerId: user.uid,
-          ownerName: user.displayName || "Roomly user",
-          ownerPhotoURL: user.photoURL || null,
-          latitude: listingLocation?.latitude ?? null,
-          longitude: listingLocation?.longitude ?? null,
-        },
-        listingImages
-      );
-
-      // Reset form
-      setTitle(""); setAddress(""); setCity(""); setPrice("");
-      setCategory("studio"); setDescription(""); setListingImages([]);
-      setListingLocation(null);
-
-      Alert.alert("Posted!", "Your listing is now live.");
-    } catch (e) {
-      console.error("[ProfileVM] createListing:", e.message);
-      setError(e.message);
-      Alert.alert("Error", "Could not post your listing. Please try again.");
+      Alert.alert("Error", e.message);
     } finally {
-      setSubmitting(false);
+      setCheckingVerified(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    if (verifyCooldown > 0) {
+      Alert.alert(
+        "Please wait",
+        `You can request another verification email in ${verifyCooldown}s.`
+      );
+      return;
+    }
+    setVerifyingEmail(true);
+    try {
+      await resendVerificationEmail();
+      setVerifyCooldown(60);
+      Alert.alert(
+        "Verification sent",
+        `We sent a verification email to ${user?.email}. Check your inbox and follow the link.`,
+        [
+          { text: "OK", style: "cancel" },
+          { text: "Open Mail", onPress: openMailApp },
+        ]
+      );
+    } catch (e) {
+      const friendly =
+        e.code === "auth/too-many-requests"
+          ? "Too many requests. Wait a few minutes and try again — Firebase limits how often verification emails can be sent."
+          : e.code === "auth/network-request-failed"
+            ? "Network error. Check your internet connection."
+            : e.message;
+      Alert.alert("Error", friendly);
+      // Even on failure, prevent immediate retry so we don't spam.
+      if (e.code === "auth/too-many-requests") setVerifyCooldown(60);
+    } finally {
+      setVerifyingEmail(false);
+    }
+  }
+
+  // ── Save phone ─────────────────────────────────────────────────────────────
+
+  async function handleSavePhone() {
+    const trimmed = phone.trim();
+    if (trimmed === savedPhone) {
+      Alert.alert("No changes", "That's already your phone number.");
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      await saveUserPhone(user.uid, trimmed);
+      Alert.alert("Saved", trimmed ? "Phone number updated." : "Phone number removed.");
+    } catch (e) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setSavingPhone(false);
     }
   }
 
@@ -407,7 +278,6 @@ export function useProfileViewModel() {
             setDeletingListingId(listing.id);
             try {
               await deleteListing(listing.id, listing.imageURLs || []);
-              // myListings updates automatically via the real-time listener
             } catch (e) {
               console.error("[ProfileVM] deleteListing:", e.message);
               Alert.alert("Error", "Could not delete listing. Please try again.");
@@ -436,29 +306,22 @@ export function useProfileViewModel() {
   }
 
   return {
-    user, profileImage, myListings,
-    title,       setTitle,
-    address,     setAddress,
-    city,        setCity,
-    price,       setPrice,
-    category,    setCategory,
-    description, setDescription,
-    listingLocation,
-    locationPickerHtml: buildLocationPickerHtml(listingLocation, address),
-    handleListingLocationMessage,
-    clearListingLocation,
-    // Multi-image
-    listingImages,
-    pickListingImages,
-    removeListingImage,
-    maxImages: MAX_IMAGES,
-    // Actions
+    user,
+    profileImage,
     pickProfileImage,
-    handlePostListing,
+    // Editable fields
+    displayName, setDisplayName, handleSaveDisplayName, savingName,
+    email,       setEmail,       handleSaveEmail,       savingEmail,
+    phone,       setPhone,       handleSavePhone,       savingPhone, savedPhone,
+    // Email verification
+    emailVerified: verifiedNow,
+    handleResendVerification, verifyingEmail, verifyCooldown,
+    handleCheckVerification, checkingVerified,
+    // My listings
+    myListings,
     handleDeleteListing,
-    handleLogout,
-    submitting,
     deletingListingId,
-    error,
+    // Logout
+    handleLogout,
   };
 }

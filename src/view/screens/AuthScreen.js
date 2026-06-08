@@ -31,6 +31,7 @@ export default function AuthScreen() {
     googleRequest,
     promptGoogleAsync,
     handleEmailAuth,
+    handleForgotPassword,
   } = useAuthViewModel();
 
   return (
@@ -107,6 +108,15 @@ export default function AuthScreen() {
                 {isRegister ? "Create Account" : "Login"}
               </Text>
             </TouchableOpacity>
+
+            {!isRegister && (
+              <TouchableOpacity
+                onPress={() => handleForgotPassword()}
+                style={styles.forgotRow}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.googleBtn}
@@ -190,6 +200,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   googleBtnText: { color: "#1f2933", fontWeight: "600", fontSize: 15 },
+  forgotRow: {
+    alignItems: "center",
+    marginTop: -4,
+    marginBottom: 16,
+  },
+  forgotText: { color: "#2563eb", fontWeight: "600", fontSize: 13 },
   switchRow:  { alignItems: "center" },
   switchText: { color: "#7b8794", fontSize: 14 },
   switchLink: { color: "#2563eb", fontWeight: "700" },

@@ -60,6 +60,8 @@ export default function FavoritesScreen() {
       <FlatList
         data={favoriteListings}
         keyExtractor={(item) => item.listingId || item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={<Text style={styles.header}>Favorites</Text>}
@@ -89,6 +91,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 24,
     flexGrow: 1,
+  },
+  row: {
+    justifyContent: "space-between",
+    marginBottom: 18,
   },
   header: {
     fontSize: 22,

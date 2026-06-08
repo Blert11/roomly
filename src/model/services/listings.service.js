@@ -22,7 +22,33 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
+import * as ImageManipulator from "expo-image-manipulator";
 import { db, storage } from "../firebase/firebase.config";
+
+// ── PRIVATE HELPER — resize + re-encode (WebP, JPEG fallback) ─────────────
+// Returns { uri, format } where format ∈ "webp" | "jpeg".
+
+async function compressForUpload(uri, { maxDim = 1024, quality = 0.6 } = {}) {
+  const tryFormat = async (format) =>
+    ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: maxDim } }],
+      { compress: quality, format }
+    );
+
+  try {
+    const out = await tryFormat(ImageManipulator.SaveFormat.WEBP);
+    return { uri: out.uri, format: "webp" };
+  } catch {
+    try {
+      const out = await tryFormat(ImageManipulator.SaveFormat.JPEG);
+      return { uri: out.uri, format: "jpeg" };
+    } catch {
+      // Last resort — upload the original URI untouched.
+      return { uri, format: "jpeg" };
+    }
+  }
+}
 
 // ── PRIVATE HELPER — upload one image, return download URL ────────────────
 
@@ -36,6 +62,12 @@ async function uploadImage(uri, storagePath) {
   });
 
   return getDownloadURL(fileRef);
+}
+
+async function compressAndUpload(uri, storagePathNoExt, opts) {
+  const { uri: compressedUri, format } = await compressForUpload(uri, opts);
+  const ext  = format === "webp" ? "webp" : "jpg";
+  return uploadImage(compressedUri, `${storagePathNoExt}.${ext}`);
 }
 
 function sortNewestFirst(listings) {
@@ -91,16 +123,17 @@ export async function createListing(fields, imageUris = []) {
     ownerId,
     ownerName,
     ownerPhotoURL,
+    ownerPhone,
     latitude,
     longitude,
   } = fields;
 
-  // Upload all images in parallel
+  // Compress + upload all images in parallel
+  const stamp = Date.now();
   const imageURLs = await Promise.all(
-    imageUris.map((uri, index) => {
-      const path = `listings/${ownerId}/${Date.now()}_${index}.jpg`;
-      return uploadImage(uri, path);
-    })
+    imageUris.map((uri, index) =>
+      compressAndUpload(uri, `listings/${ownerId}/${stamp}_${index}`)
+    )
   );
 
   const docRef = await addDoc(collection(db, "listings"), {
@@ -112,6 +145,7 @@ export async function createListing(fields, imageUris = []) {
     category:  category || "other",
     ownerName: ownerName || "",
     ownerPhotoURL: ownerPhotoURL || null,
+    ownerPhone: ownerPhone || "",
     latitude,
     longitude,
     imageURLs,           // array — may be empty, 1, or up to 5 URLs
@@ -134,6 +168,52 @@ export async function updateListing(listingId, fields) {
   });
 }
 
+// ── UPDATE WITH IMAGES ─────────────────────────────────────────────────────
+// Used by the edit flow. Caller passes:
+//   - listingId
+//   - fields:      same shape as createListing's `fields`
+//   - keptURLs:    array of existing cloud URLs the user wants to keep
+//   - newURIs:     array of newly-picked local URIs to upload
+//   - removedURLs: array of existing cloud URLs the user removed
+//                  (deleted from Storage)
+//
+// Final imageURLs on the doc = [...keptURLs, ...uploadedNewURLs].
+// Order is preserved from how the caller passes them.
+
+export async function updateListingWithImages(
+  listingId,
+  fields,
+  { keptURLs = [], newURIs = [], removedURLs = [] } = {}
+) {
+  const { ownerId } = fields;
+
+  // Delete removed images from Storage (best-effort).
+  await Promise.allSettled(
+    removedURLs.map(async (url) => {
+      try { await deleteObject(ref(storage, url)); } catch { /* already gone */ }
+    })
+  );
+
+  // Upload new images in parallel.
+  const stamp = Date.now();
+  const uploadedURLs = await Promise.all(
+    newURIs.map((uri, index) =>
+      compressAndUpload(uri, `listings/${ownerId}/${stamp}_${index}`)
+    )
+  );
+
+  const imageURLs = [...keptURLs, ...uploadedURLs];
+
+  await updateDoc(doc(db, "listings", listingId), {
+    ...fields,
+    price:     Number(fields.price),
+    imageURLs,
+    updatedAt: serverTimestamp(),
+  });
+
+  return imageURLs;
+}
+
 // ── DELETE ─────────────────────────────────────────────────────────────────
 
 export async function deleteListing(listingId, imageURLs = []) {
@@ -148,5 +228,5 @@ export async function deleteListing(listingId, imageURLs = []) {
 // ── UPLOAD — profile avatar ────────────────────────────────────────────────
 
 export async function uploadAvatar(userId, uri) {
-  return uploadImage(uri, `avatars/${userId}.jpg`);
+  return compressAndUpload(uri, `avatars/${userId}`, { maxDim: 512, quality: 0.8 });
 }

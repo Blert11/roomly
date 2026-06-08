@@ -6,13 +6,14 @@
 // ─────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
-import { Alert, Platform } from "react-native";
+import { Alert, Linking, Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import {
   registerWithEmail,
   loginWithEmail,
   loginWithGoogle,
+  sendPasswordReset,
 } from "../model/services/auth.service";
 import {
   GOOGLE_ANDROID_CLIENT_ID,
@@ -21,6 +22,23 @@ import {
 } from "../model/config/google-auth.config";
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Opens the default mail app on the device. Tries Gmail first (its URL
+// scheme is supported on iOS when Gmail is installed) and falls back to
+// the system's default mail handler.
+async function openMailApp() {
+  const candidates = ["googlegmail://", "message://", "mailto:"];
+  for (const url of candidates) {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+        return;
+      }
+    } catch (_) { /* try next */ }
+  }
+  Alert.alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
+}
 
 function isPlaceholder(value) {
   return !value || value.startsWith("PASTE_");
@@ -116,6 +134,40 @@ export function useAuthViewModel() {
     }
   }
 
+  // ── Forgot password ──────────────────────────────────────────────────────
+  // Sends a reset email. If `targetEmail` isn't passed, uses the field value.
+  async function handleForgotPassword(targetEmail) {
+    const addr = (targetEmail || email).trim();
+    if (!addr) {
+      Alert.alert("Email needed", "Type your email above first, then tap Forgot password.");
+      return false;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await sendPasswordReset(addr);
+      Alert.alert(
+        "Check your inbox",
+        `We sent a password reset link to ${addr}. Follow the link to choose a new password.`,
+        [
+          { text: "OK", style: "cancel" },
+          { text: "Open Mail", onPress: openMailApp },
+        ]
+      );
+      return true;
+    } catch (e) {
+      setError(e.message);
+      const msg =
+        e.code === "auth/user-not-found"   ? "No account uses that email." :
+        e.code === "auth/invalid-email"    ? "That email address isn't valid." :
+        e.message;
+      Alert.alert("Reset Error", msg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleGoogleAuth() {
     const missingMessage = getMissingGoogleClientMessage();
     if (missingMessage) {
@@ -142,5 +194,6 @@ export function useAuthViewModel() {
     googleRequest:    request,
     promptGoogleAsync: handleGoogleAuth,
     handleEmailAuth,
+    handleForgotPassword,
   };
 }

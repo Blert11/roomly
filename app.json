@@ -33,8 +33,18 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#2563eb"
+        }
+      ]
     ],
+    "notification": {
+      "iosDisplayInForeground": true
+    },
     "extra": {
       "eas": {
         "projectId": "51c6cc1d-acd2-4817-b0a8-979f3a0448f7"
