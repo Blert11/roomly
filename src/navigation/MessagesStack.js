@@ -2,11 +2,20 @@
 // Stack navigator: Inbox (Conversations) → Chat
 
 import React from "react";
+import { Image, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import ConversationsScreen from "../view/screens/ConversationsScreen";
 import ChatScreen          from "../view/screens/ChatScreen";
 
 const Stack = createNativeStackNavigator();
+
+const HeaderLogo = () => (
+  <Image
+    source={require("../../assets/logo.png")}
+    style={styles.logo}
+    resizeMode="contain"
+  />
+);
 
 export default function MessagesStack() {
   return (
@@ -15,12 +24,13 @@ export default function MessagesStack() {
         headerStyle:      { backgroundColor: "#ffffff" },
         headerTintColor:  "#2c3947",
         headerTitleStyle: { fontWeight: "600" },
+        headerTitleAlign: "center",
       }}
     >
       <Stack.Screen
         name="Conversations"
         component={ConversationsScreen}
-        options={{ title: "Messages" }}
+        options={{ headerTitle: () => <HeaderLogo /> }}
       />
       <Stack.Screen
         name="Chat"
@@ -30,3 +40,7 @@ export default function MessagesStack() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  logo: { width: 120, height: 40 },
+});

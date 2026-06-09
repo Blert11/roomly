@@ -6,6 +6,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -44,6 +45,14 @@ import ProfileStack      from "./ProfileStack";
 import { useConversationsViewModel } from "../viewmodel/useConversationsViewModel";
 
 const Tab = createBottomTabNavigator();
+
+const HeaderLogo = () => (
+  <Image
+    source={require("../../assets/logo.png")}
+    style={styles.headerLogo}
+    resizeMode="contain"
+  />
+);
 
 const ACTIVE_COLOR   = "#2c3947";
 const INACTIVE_COLOR = "#9aa5b1";
@@ -151,7 +160,7 @@ export default function AppNavigator() {
           title: "Post",
           tabBarLabel: () => null,
           tabBarButton: (props) => <PlusTabButton {...props} />,
-          headerTitle: "Post a Listing",
+          headerTitle: () => <HeaderLogo />,
         }}
       />
       <Tab.Screen
@@ -172,6 +181,7 @@ export default function AppNavigator() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  headerLogo: { width: 120, height: 40 },
 
   plusWrap: {
     flex: 1,

@@ -26,6 +26,7 @@ export default function HomeStack() {
         headerStyle:      { backgroundColor: "#ffffff" },
         headerTintColor:  "#2c3947",
         headerTitleStyle: { fontWeight: "600" },
+        headerTitleAlign: "center",
       }}
     >
       <Stack.Screen
@@ -53,5 +54,5 @@ export default function HomeStack() {
 }
 
 const styles = StyleSheet.create({
-  logo: { width: 100, height: 32 },
+  logo: { width: 120, height: 40 },
 });

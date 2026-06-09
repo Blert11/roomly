@@ -21,7 +21,7 @@ import {
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, StackActions } from "@react-navigation/native";
 import { usePostListingViewModel } from "../../viewmodel/usePostListingViewModel";
 
 const CATEGORIES   = ["studio", "room", "1br", "2br", "house", "other"];
@@ -56,8 +56,20 @@ export default function PostListingScreen({ route }) {
   } = usePostListingViewModel({
     editingListing,
     onPosted: () => {
-      if (editingListing) navigation.goBack();
-      else navigation.navigate("ProfileTab", { screen: "Profile" });
+      if (editingListing) {
+        navigation.goBack();
+      } else {
+        // navigate("ProfileTab", { screen: "Profile" }) internally dispatches
+        // popToTop through the Tab router, which can't handle it.
+        // Instead: switch to the tab, then dispatch popToTop directly to the
+        // ProfileStack navigator using its state key as the target.
+        const tabState = navigation.getState();
+        const profileTab = tabState?.routes?.find((r) => r.name === "ProfileTab");
+        navigation.navigate("ProfileTab");
+        if (profileTab?.state?.key && profileTab.state.routes.length > 1) {
+          navigation.dispatch({ ...StackActions.popToTop(), target: profileTab.state.key });
+        }
+      }
     },
   });
 
