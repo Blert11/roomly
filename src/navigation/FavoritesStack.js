@@ -44,11 +44,6 @@ export default function FavoritesStack() {
         options={{ title: "Seller" }}
       />
       <Stack.Screen
-        name="Details"
-        component={DetailsScreen}
-        options={{ title: "Listing Details" }}
-      />
-      <Stack.Screen
         name="Chat"
         component={ChatScreen}
         options={{ title: "Chat" }}

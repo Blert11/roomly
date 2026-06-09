@@ -23,7 +23,6 @@
         "backgroundColor": "#e8edf2"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.fatkoou.roomly"
