@@ -4,7 +4,8 @@
 // No Firebase imports. No JSX. No UI rendering.
 // ─────────────────────────────────────────────
 
-import { Alert, Linking } from "react-native";
+import { useState } from "react";
+import { Linking } from "react-native";
 import { GOOGLE_MAPS_API_KEY } from "../model/config/maps.config";
 
 function buildStaticDetailsMapHtml(listing) {
@@ -65,6 +66,12 @@ function buildStaticDetailsMapHtml(listing) {
 }
 
 export function useDetailsViewModel(listing) {
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function _alert(title, message, buttons) {
+    setAlertConfig({ title, message, buttons, _id: Date.now() });
+  }
+
   const formattedPrice =
     listing?.price != null
       ? `$${Number(listing.price).toLocaleString()}/mo`
@@ -112,7 +119,7 @@ export function useDetailsViewModel(listing) {
     : null;
 
   function handleContact() {
-    Alert.alert(
+    _alert(
       "Contact Owner",
       "Real-time messaging is coming in the next update!"
     );
@@ -120,7 +127,7 @@ export function useDetailsViewModel(listing) {
 
   async function handleOpenMap() {
     if (!googleMapsUrl) {
-      Alert.alert("Location missing", "This listing does not have an address yet.");
+      _alert("Location missing", "This listing does not have an address yet.");
       return;
     }
     await Linking.openURL(googleMapsUrl);
@@ -130,6 +137,7 @@ export function useDetailsViewModel(listing) {
     formattedPrice,
     formattedLocation,
     mapHtml,
+    alertConfig,
     handleContact,
     handleOpenMap,
   };

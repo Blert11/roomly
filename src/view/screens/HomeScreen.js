@@ -4,7 +4,7 @@
 // (Replaces the dedicated Search tab — search now lives here.)
 // ─────────────────────────────────────────────
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   FlatList,
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,42 +49,25 @@ function EmptyState({ query, category }) {
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { listings, loading, error } = useListingsViewModel();
-  const { isFavorite, toggleFavorite } = useFavoritesViewModel();
-  const [query, setQuery]       = useState("");
-  const [category, setCategory] = useState("all");
-  const [sort, setSort]         = useState("newest");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const {
+    filteredListings,
+    loading,
+    error,
+    query,        setQuery,
+    category,     setCategory,
+    sort,         setSort,
+    filtersOpen,  setFiltersOpen,
+    filtersActive,
+    trimmed,
+  } = useListingsViewModel();
+  const { isFavorite, toggleFavorite, alertConfig: favAlertConfig } = useFavoritesViewModel();
 
-  const trimmed = query.trim().toLowerCase();
+  useEffect(() => {
+    if (!favAlertConfig) return;
+    Alert.alert(favAlertConfig.title, favAlertConfig.message, favAlertConfig.buttons);
+  }, [favAlertConfig?._id]);
 
-  const filtered = useMemo(() => {
-    let out = listings;
-
-    if (category !== "all") {
-      out = out.filter((l) => (l.category || "other") === category);
-    }
-
-    if (trimmed) {
-      out = out.filter((l) => {
-        const haystack = [
-          l.title, l.address, l.city, l.description, l.category, l.ownerName,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(trimmed);
-      });
-    }
-
-    if (sort === "priceAsc") {
-      out = [...out].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-    } else if (sort === "priceDesc") {
-      out = [...out].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-    }
-
-    return out;
-  }, [listings, trimmed, category, sort]);
+  const filtered = filteredListings;
 
   if (loading) {
     return (
@@ -101,8 +85,6 @@ export default function HomeScreen() {
       </View>
     );
   }
-
-  const filtersActive = category !== "all" || sort !== "newest";
 
   return (
     <View style={styles.container}>

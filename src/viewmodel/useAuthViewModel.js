@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { Alert, Linking, Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
 import {
   registerWithEmail,
   loginWithEmail,
@@ -14,8 +13,6 @@ import {
   GOOGLE_IOS_CLIENT_ID,
   GOOGLE_WEB_CLIENT_ID,
 } from "../model/config/google-auth.config";
-
-WebBrowser.maybeCompleteAuthSession();
 
 // Opens the default mail app on the device. Tries Gmail first (its URL
 // scheme is supported on iOS when Gmail is installed) and falls back to
@@ -31,7 +28,7 @@ async function openMailApp() {
       }
     } catch (_) { /* try next */ }
   }
-  Alert.alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
+  _alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
 }
 
 function isPlaceholder(value) {
@@ -59,6 +56,11 @@ export function useAuthViewModel() {
   const [password, setPassword]     = useState("");
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function _alert(title, message, buttons) {
+    setAlertConfig({ title, message, buttons, _id: Date.now() });
+  }
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -73,7 +75,7 @@ export function useAuthViewModel() {
 
     const idToken = response.params?.id_token || response.authentication?.idToken;
     if (!idToken) {
-      Alert.alert("Google Error", "No ID token returned. Please try again.");
+      _alert("Google Error", "No ID token returned. Please try again.");
       return;
     }
 
@@ -84,7 +86,7 @@ export function useAuthViewModel() {
         await loginWithGoogle(idToken);
       } catch (e) {
         setError(e.message);
-        Alert.alert("Google Sign-In Error", e.message);
+        _alert("Google Sign-In Error", e.message);
       } finally {
         setLoading(false);
       }
@@ -93,15 +95,15 @@ export function useAuthViewModel() {
 
   async function handleEmailAuth() {
     if (isRegister && (!firstName.trim() || !lastName.trim())) {
-      Alert.alert("Missing fields", "Please enter your name and surname.");
+      _alert("Missing fields", "Please enter your name and surname.");
       return;
     }
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing fields", "Please enter your email and password.");
+      _alert("Missing fields", "Please enter your email and password.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
+      _alert("Weak password", "Password must be at least 6 characters.");
       return;
     }
 
@@ -122,7 +124,7 @@ export function useAuthViewModel() {
         e.code === "auth/wrong-password"       ? "Incorrect password." :
         e.code === "auth/email-already-in-use" ? "An account with this email already exists." :
         e.message;
-      Alert.alert("Auth Error", msg);
+      _alert("Auth Error", msg);
     } finally {
       setLoading(false);
     }
@@ -133,14 +135,14 @@ export function useAuthViewModel() {
   async function handleForgotPassword(targetEmail) {
     const addr = (targetEmail || email).trim();
     if (!addr) {
-      Alert.alert("Email needed", "Type your email above first, then tap Forgot password.");
+      _alert("Email needed", "Type your email above first, then tap Forgot password.");
       return false;
     }
     setLoading(true);
     setError(null);
     try {
       await sendPasswordReset(addr);
-      Alert.alert(
+      _alert(
         "Check your inbox",
         `We sent a password reset link to ${addr}. Follow the link to choose a new password.`,
         [
@@ -155,7 +157,7 @@ export function useAuthViewModel() {
         e.code === "auth/user-not-found"   ? "No account uses that email." :
         e.code === "auth/invalid-email"    ? "That email address isn't valid." :
         e.message;
-      Alert.alert("Reset Error", msg);
+      _alert("Reset Error", msg);
       return false;
     } finally {
       setLoading(false);
@@ -165,12 +167,12 @@ export function useAuthViewModel() {
   async function handleGoogleAuth() {
     const missingMessage = getMissingGoogleClientMessage();
     if (missingMessage) {
-      Alert.alert("Google setup needed", missingMessage);
+      _alert("Google setup needed", missingMessage);
       return;
     }
 
     if (!request) {
-      Alert.alert("Google Error", "Google sign-in is still loading. Try again in a moment.");
+      _alert("Google Error", "Google sign-in is still loading. Try again in a moment.");
       return;
     }
 
@@ -185,6 +187,7 @@ export function useAuthViewModel() {
     password,   setPassword,
     loading,
     error,
+    alertConfig,
     googleRequest:    request,
     promptGoogleAsync: handleGoogleAuth,
     handleEmailAuth,

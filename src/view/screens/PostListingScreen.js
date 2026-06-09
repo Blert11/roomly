@@ -4,7 +4,7 @@
 // Reached from the center "+" button in the tab bar.
 // ─────────────────────────────────────────────
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -48,6 +49,7 @@ export default function PostListingScreen({ route }) {
     removeListingImage,
     maxImages,
     phone, setPhone, profilePhone,
+    alertConfig,
     handlePostListing,
     submitting,
     isEditing,
@@ -58,6 +60,11 @@ export default function PostListingScreen({ route }) {
       else navigation.navigate("ProfileTab", { screen: "Profile" });
     },
   });
+
+  useEffect(() => {
+    if (!alertConfig) return;
+    Alert.alert(alertConfig.title, alertConfig.message, alertConfig.buttons);
+  }, [alertConfig?._id]);
 
   return (
     <KeyboardAvoidingView

@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
-import { Alert, Linking } from "react-native";
+import { Linking } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 // Open the device's default mail app — tries Gmail first, then iOS Mail,
@@ -19,7 +19,7 @@ async function openMailApp() {
       if (supported) { await Linking.openURL(url); return; }
     } catch (_) { /* try next */ }
   }
-  Alert.alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
+  _alert("Couldn't open mail app", "Open your email manually and find the message from Roomly.");
 }
 import {
   logOut,
@@ -41,6 +41,11 @@ import {
 
 export function useProfileViewModel() {
   const user = getCurrentUser();
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function _alert(title, message, buttons) {
+    setAlertConfig({ title, message, buttons, _id: Date.now() });
+  }
 
   // Profile photo
   const [profileImage, setProfileImage] = useState(user?.photoURL || null);
@@ -88,7 +93,7 @@ export function useProfileViewModel() {
   async function requestGalleryPermission() {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!granted) {
-      Alert.alert("Permission needed", "Please allow gallery access in Settings.");
+      _alert("Permission needed", "Please allow gallery access in Settings.");
     }
     return granted;
   }
@@ -111,9 +116,9 @@ export function useProfileViewModel() {
       const downloadURL = await uploadAvatar(user.uid, result.assets[0].uri);
       await updateUserProfile({ photoURL: downloadURL });
       setProfileImage(downloadURL);
-      Alert.alert("Success", "Profile picture updated!");
+      _alert("Success", "Profile picture updated!");
     } catch (e) {
-      Alert.alert("Upload Error", e.message);
+      _alert("Upload Error", e.message);
     }
   }
 
@@ -122,19 +127,19 @@ export function useProfileViewModel() {
   async function handleSaveDisplayName() {
     const trimmed = displayName.trim();
     if (!trimmed) {
-      Alert.alert("Empty name", "Username can't be empty.");
+      _alert("Empty name", "Username can't be empty.");
       return;
     }
     if (trimmed === user?.displayName) {
-      Alert.alert("No changes", "That's already your username.");
+      _alert("No changes", "That's already your username.");
       return;
     }
     setSavingName(true);
     try {
       await updateUserProfile({ displayName: trimmed });
-      Alert.alert("Saved", "Username updated.");
+      _alert("Saved", "Username updated.");
     } catch (e) {
-      Alert.alert("Error", e.message);
+      _alert("Error", e.message);
     } finally {
       setSavingName(false);
     }
@@ -145,20 +150,20 @@ export function useProfileViewModel() {
   async function handleSaveEmail() {
     const trimmed = email.trim();
     if (!trimmed) {
-      Alert.alert("Empty email", "Email can't be empty.");
+      _alert("Empty email", "Email can't be empty.");
       return;
     }
     if (trimmed === user?.email) {
-      Alert.alert("No changes", "That's already your email.");
+      _alert("No changes", "That's already your email.");
       return;
     }
     setSavingEmail(true);
     try {
       await updateUserEmail(trimmed);
-      Alert.alert("Saved", "Email updated.");
+      _alert("Saved", "Email updated.");
     } catch (e) {
       // Firebase often requires recent login to change email.
-      Alert.alert(
+      _alert(
         "Could not update email",
         e.code === "auth/requires-recent-login"
           ? "For security, please log out and log back in, then try again."
@@ -195,15 +200,15 @@ export function useProfileViewModel() {
       const refreshed = await reloadCurrentUser();
       if (refreshed?.emailVerified) {
         setVerifiedNow(true);
-        Alert.alert("Verified ✓", "Thanks — your email is confirmed.");
+        _alert("Verified ✓", "Thanks — your email is confirmed.");
       } else {
-        Alert.alert(
+        _alert(
           "Not verified yet",
           "We haven't seen the verification yet. Open the link in the email we sent, then tap this button again."
         );
       }
     } catch (e) {
-      Alert.alert("Error", e.message);
+      _alert("Error", e.message);
     } finally {
       setCheckingVerified(false);
     }
@@ -211,7 +216,7 @@ export function useProfileViewModel() {
 
   async function handleResendVerification() {
     if (verifyCooldown > 0) {
-      Alert.alert(
+      _alert(
         "Please wait",
         `You can request another verification email in ${verifyCooldown}s.`
       );
@@ -221,7 +226,7 @@ export function useProfileViewModel() {
     try {
       await resendVerificationEmail();
       setVerifyCooldown(60);
-      Alert.alert(
+      _alert(
         "Verification sent",
         `We sent a verification email to ${user?.email}. Check your inbox and follow the link.`,
         [
@@ -236,7 +241,7 @@ export function useProfileViewModel() {
           : e.code === "auth/network-request-failed"
             ? "Network error. Check your internet connection."
             : e.message;
-      Alert.alert("Error", friendly);
+      _alert("Error", friendly);
       // Even on failure, prevent immediate retry so we don't spam.
       if (e.code === "auth/too-many-requests") setVerifyCooldown(60);
     } finally {
@@ -249,15 +254,15 @@ export function useProfileViewModel() {
   async function handleSavePhone() {
     const trimmed = phone.trim();
     if (trimmed === savedPhone) {
-      Alert.alert("No changes", "That's already your phone number.");
+      _alert("No changes", "That's already your phone number.");
       return;
     }
     setSavingPhone(true);
     try {
       await saveUserPhone(user.uid, trimmed);
-      Alert.alert("Saved", trimmed ? "Phone number updated." : "Phone number removed.");
+      _alert("Saved", trimmed ? "Phone number updated." : "Phone number removed.");
     } catch (e) {
-      Alert.alert("Error", e.message);
+      _alert("Error", e.message);
     } finally {
       setSavingPhone(false);
     }
@@ -266,7 +271,7 @@ export function useProfileViewModel() {
   // ── Delete listing ─────────────────────────────────────────────────────────
 
   function handleDeleteListing(listing) {
-    Alert.alert(
+    _alert(
       "Delete Listing",
       `Are you sure you want to delete "${listing.title}"? This cannot be undone.`,
       [
@@ -280,7 +285,7 @@ export function useProfileViewModel() {
               await deleteListing(listing.id, listing.imageURLs || []);
             } catch (e) {
               console.error("[ProfileVM] deleteListing:", e.message);
-              Alert.alert("Error", "Could not delete listing. Please try again.");
+              _alert("Error", "Could not delete listing. Please try again.");
             } finally {
               setDeletingListingId(null);
             }
@@ -293,13 +298,13 @@ export function useProfileViewModel() {
   // ── Logout ─────────────────────────────────────────────────────────────────
 
   function handleLogout() {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
+    _alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
-          try { await logOut(); } catch (e) { Alert.alert("Error", e.message); }
+          try { await logOut(); } catch (e) { _alert("Error", e.message); }
         },
       },
     ]);
@@ -309,6 +314,7 @@ export function useProfileViewModel() {
     user,
     profileImage,
     pickProfileImage,
+    alertConfig,
     // Editable fields
     displayName, setDisplayName, handleSaveDisplayName, savingName,
     email,       setEmail,       handleSaveEmail,       savingEmail,

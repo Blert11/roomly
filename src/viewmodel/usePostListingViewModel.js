@@ -6,7 +6,6 @@
 // ─────────────────────────────────────────────
 
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { getCurrentUser } from "../model/services/auth.service";
 import {
@@ -200,6 +199,11 @@ function buildLocationPickerHtml(selectedLocation, address) {
 export function usePostListingViewModel({ onPosted, editingListing } = {}) {
   const user = getCurrentUser();
   const isEditing = Boolean(editingListing?.id || editingListing?.listingId);
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function _alert(title, message, buttons) {
+    setAlertConfig({ title, message, buttons, _id: Date.now() });
+  }
   const editingListingId = editingListing?.id || editingListing?.listingId || null;
 
   const [title, setTitle]               = useState(editingListing?.title || "");
@@ -247,7 +251,7 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
   async function requestGalleryPermission() {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!granted) {
-      Alert.alert("Permission needed", "Please allow gallery access in Settings.");
+      _alert("Permission needed", "Please allow gallery access in Settings.");
     }
     return granted;
   }
@@ -257,7 +261,7 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
 
     const remaining = MAX_IMAGES - listingImages.length;
     if (remaining <= 0) {
-      Alert.alert("Limit reached", `You can add up to ${MAX_IMAGES} photos per listing.`);
+      _alert("Limit reached", `You can add up to ${MAX_IMAGES} photos per listing.`);
       return;
     }
 
@@ -322,11 +326,11 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
 
   async function handlePostListing() {
     if (!title.trim() || !address.trim() || !price.trim() || !description.trim()) {
-      Alert.alert("Missing fields", "Title, Address, Price and Description are required.");
+      _alert("Missing fields", "Title, Address, Price and Description are required.");
       return;
     }
     if (isNaN(Number(price)) || Number(price) <= 0) {
-      Alert.alert("Invalid price", "Price must be a positive number.");
+      _alert("Invalid price", "Price must be a positive number.");
       return;
     }
 
@@ -357,7 +361,7 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
 
         // Don't reset the form on edit — the user may want to keep tweaking.
         setRemovedExistingURLs([]);
-        Alert.alert("Saved", "Your listing has been updated.");
+        _alert("Saved", "Your listing has been updated.");
         if (typeof onPosted === "function") onPosted();
       } else {
         await createListing(
@@ -379,12 +383,12 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
         );
 
         resetForm();
-        Alert.alert("Posted!", "Your listing is now live.");
+        _alert("Posted!", "Your listing is now live.");
         if (typeof onPosted === "function") onPosted();
       }
     } catch (e) {
       console.error("[PostListingVM] save:", e.message);
-      Alert.alert("Error", isEditing
+      _alert("Error", isEditing
         ? "Could not save changes. Please try again."
         : "Could not post your listing. Please try again."
       );
@@ -411,6 +415,7 @@ export function usePostListingViewModel({ onPosted, editingListing } = {}) {
     maxImages: MAX_IMAGES,
     phone,        setPhone,
     profilePhone,
+    alertConfig,
     handlePostListing,
     submitting,
     resetForm,

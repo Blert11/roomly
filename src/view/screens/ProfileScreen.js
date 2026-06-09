@@ -4,7 +4,7 @@
 // Post-listing form lives in PostListingScreen (opened via the center "+" tab).
 // ─────────────────────────────────────────────
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
     user,
     profileImage,
     pickProfileImage,
+    alertConfig,
     displayName, setDisplayName, handleSaveDisplayName, savingName,
     email,       setEmail,       handleSaveEmail,       savingEmail,
     phone,       setPhone,       handleSavePhone,       savingPhone, savedPhone,
@@ -36,6 +38,11 @@ export default function ProfileScreen() {
     deletingListingId,
     handleLogout,
   } = useProfileViewModel();
+
+  useEffect(() => {
+    if (!alertConfig) return;
+    Alert.alert(alertConfig.title, alertConfig.message, alertConfig.buttons);
+  }, [alertConfig?._id]);
 
   const nameDirty  = displayName.trim() !== (user?.displayName || "");
   const emailDirty = email.trim() !== (user?.email || "");

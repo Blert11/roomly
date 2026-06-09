@@ -5,7 +5,7 @@
 // No Firebase imports. No business logic.
 // ─────────────────────────────────────────────
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -37,10 +37,20 @@ export default function DetailsScreen({ route }) {
     formattedPrice,
     formattedLocation,
     mapHtml,
+    alertConfig: detailsAlertConfig,
     handleOpenMap,
-  } =
-    useDetailsViewModel(listing);
-  const { isFavorite, toggleFavorite } = useFavoritesViewModel();
+  } = useDetailsViewModel(listing);
+  const { isFavorite, toggleFavorite, alertConfig: favAlertConfig } = useFavoritesViewModel();
+
+  useEffect(() => {
+    if (!detailsAlertConfig) return;
+    Alert.alert(detailsAlertConfig.title, detailsAlertConfig.message, detailsAlertConfig.buttons);
+  }, [detailsAlertConfig?._id]);
+
+  useEffect(() => {
+    if (!favAlertConfig) return;
+    Alert.alert(favAlertConfig.title, favAlertConfig.message, favAlertConfig.buttons);
+  }, [favAlertConfig?._id]);
   const listingId = listing.id || listing.listingId;
   const favorite = isFavorite(listingId);
   const ownerName = listing.ownerName || "Roomly user";

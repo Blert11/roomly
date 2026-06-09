@@ -4,7 +4,6 @@
 // ─────────────────────────────────────────────
 
 import { useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { getCurrentUser } from "../model/services/auth.service";
 import {
   addFavorite,
@@ -17,6 +16,11 @@ export function useFavoritesViewModel() {
   const [favoriteListings, setFavoriteListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [alertConfig, setAlertConfig] = useState(null);
+
+  function _alert(title, message, buttons) {
+    setAlertConfig({ title, message, buttons, _id: Date.now() });
+  }
 
   useEffect(() => {
     if (!user) {
@@ -54,7 +58,7 @@ export function useFavoritesViewModel() {
 
   async function toggleFavorite(listing) {
     if (!user) {
-      Alert.alert("Login required", "Please log in to favorite listings.");
+      _alert("Login required", "Please log in to favorite listings.");
       return;
     }
 
@@ -67,7 +71,7 @@ export function useFavoritesViewModel() {
       }
     } catch (e) {
       console.error("[FavoritesVM] toggleFavorite:", e.message);
-      Alert.alert("Error", "Could not update favorites. Please try again.");
+      _alert("Error", "Could not update favorites. Please try again.");
     }
   }
 
@@ -76,6 +80,7 @@ export function useFavoritesViewModel() {
     favoriteIds,
     loading,
     error,
+    alertConfig,
     isFavorite,
     toggleFavorite,
   };

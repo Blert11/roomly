@@ -5,7 +5,7 @@
 // No Firebase imports. No business logic. No async operations.
 // ─────────────────────────────────────────────
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -14,11 +14,15 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { useAuthViewModel } from "../../viewmodel/useAuthViewModel";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
   const {
@@ -28,11 +32,17 @@ export default function AuthScreen() {
     email,      setEmail,
     password,   setPassword,
     loading,
+    alertConfig,
     googleRequest,
     promptGoogleAsync,
     handleEmailAuth,
     handleForgotPassword,
   } = useAuthViewModel();
+
+  useEffect(() => {
+    if (!alertConfig) return;
+    Alert.alert(alertConfig.title, alertConfig.message, alertConfig.buttons);
+  }, [alertConfig?._id]);
 
   return (
     <KeyboardAvoidingView

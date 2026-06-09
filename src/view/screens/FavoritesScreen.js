@@ -3,13 +3,14 @@
 // VIEW LAYER — renders the current user's favorite listings.
 // ─────────────────────────────────────────────
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   FlatList,
   Text,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,9 +35,15 @@ export default function FavoritesScreen() {
     favoriteListings,
     loading,
     error,
+    alertConfig,
     isFavorite,
     toggleFavorite,
   } = useFavoritesViewModel();
+
+  useEffect(() => {
+    if (!alertConfig) return;
+    Alert.alert(alertConfig.title, alertConfig.message, alertConfig.buttons);
+  }, [alertConfig?._id]);
 
   if (loading) {
     return (
