@@ -42,11 +42,6 @@ function buildConversationId(uidA, uidB) {
   return [uidA, uidB].sort().join("__");
 }
 
-// ── CREATE / GET — open a conversation between currentUser and otherUser ──
-//
-// Returns { id, conversation } — caller can immediately route into the chat.
-// Safe to call repeatedly: it merges info each time so participantInfo stays fresh.
-
 export async function openOrCreateConversation(currentUser, otherUser) {
   if (!currentUser?.uid || !otherUser?.uid) {
     throw new Error("openOrCreateConversation: both users required");

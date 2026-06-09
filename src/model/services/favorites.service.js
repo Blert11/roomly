@@ -1,8 +1,3 @@
-// src/model/services/favorites.service.js
-// ─────────────────────────────────────────────
-// MODEL LAYER — Firestore operations for user favorites.
-// Favorites are stored per user with a lightweight listing snapshot.
-// ─────────────────────────────────────────────
 
 import {
   collection,

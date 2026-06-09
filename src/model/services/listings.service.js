@@ -1,9 +1,3 @@
-// src/model/services/listings.service.js
-// ─────────────────────────────────────────────
-// MODEL LAYER — all Firestore + Firebase Storage operations for listings.
-// Pure data functions. No JSX. No React. No UI.
-// ViewModel calls these; View never touches Firebase.
-// ─────────────────────────────────────────────
 
 import {
   collection,
@@ -168,17 +162,6 @@ export async function updateListing(listingId, fields) {
   });
 }
 
-// ── UPDATE WITH IMAGES ─────────────────────────────────────────────────────
-// Used by the edit flow. Caller passes:
-//   - listingId
-//   - fields:      same shape as createListing's `fields`
-//   - keptURLs:    array of existing cloud URLs the user wants to keep
-//   - newURIs:     array of newly-picked local URIs to upload
-//   - removedURLs: array of existing cloud URLs the user removed
-//                  (deleted from Storage)
-//
-// Final imageURLs on the doc = [...keptURLs, ...uploadedNewURLs].
-// Order is preserved from how the caller passes them.
 
 export async function updateListingWithImages(
   listingId,

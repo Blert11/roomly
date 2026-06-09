@@ -1,9 +1,3 @@
-// src/model/services/auth.service.js
-// ─────────────────────────────────────────────
-// MODEL LAYER — all Firebase Authentication calls.
-// Pure data functions. No JSX. No React. No UI.
-// ViewModel calls these; View never touches Firebase.
-// ─────────────────────────────────────────────
 
 import {
   createUserWithEmailAndPassword,
@@ -26,8 +20,6 @@ export async function registerWithEmail(email, password, displayName = "") {
   if (displayName.trim()) {
     await updateProfile(result.user, { displayName: displayName.trim() });
   }
-  // Best-effort: fire the verification email after sign-up. The user
-  // can still use the app while unverified; we just nudge them.
   try { await sendEmailVerification(result.user); } catch (_) { /* swallow */ }
   return result.user;
 }
@@ -82,10 +74,6 @@ export async function resendVerificationEmail() {
   await sendEmailVerification(auth.currentUser);
 }
 
-// Force-refreshes the currently signed-in user from Firebase. Used after
-// the user clicks the email-verification link so the local session picks
-// up the new emailVerified=true status. Returns the (possibly updated)
-// user object.
 export async function reloadCurrentUser() {
   if (!auth.currentUser) throw new Error("Not signed in.");
   await auth.currentUser.reload();

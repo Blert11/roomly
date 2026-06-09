@@ -1,9 +1,3 @@
-// src/viewmodel/useAuthViewModel.js
-// ─────────────────────────────────────────────
-// VIEWMODEL LAYER — owns all login / register / Google sign-in logic.
-// Calls model/services. Exposes clean state to the View.
-// No Firebase imports. No JSX. No UI rendering.
-// ─────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
 import { Alert, Linking, Platform } from "react-native";
